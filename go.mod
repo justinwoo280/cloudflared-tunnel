@@ -19,6 +19,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/yamux v0.1.1
 	github.com/json-iterator/go v1.1.12
+	github.com/ZYKJShadow/tuic-protocol-go v0.0.0-20240602040221-eebb73052639
 	github.com/mattn/go-colorable v0.1.13
 	github.com/miekg/dns v1.1.66
 	github.com/mitchellh/go-homedir v1.1.0

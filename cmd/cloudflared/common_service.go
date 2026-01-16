@@ -24,6 +24,14 @@ func buildArgsForToken(c *cli.Context, log *zerolog.Logger) ([]string, error) {
 		args = append(args, "--"+cfdflags.Proxy)
 	}
 
+	// Add --tuic flag if set
+	if c.Bool(cfdflags.TUIC) {
+		args = append(args, "--"+cfdflags.TUIC)
+		if tuicConfig := c.String(cfdflags.TUICConfig); tuicConfig != "" {
+			args = append(args, "--"+cfdflags.TUICConfig, tuicConfig)
+		}
+	}
+
 	return args, nil
 }
 
@@ -43,4 +51,19 @@ var proxyFlag = &cli.BoolFlag{
 	Usage:   "Enable built-in proxy server (configure via UUID, PORT, MODE environment variables)",
 	EnvVars: []string{"CLOUDFLARED_PROXY"},
 	Value:   false,
+}
+
+// tuicFlag is the CLI flag for enabling the TUIC server
+var tuicFlag = &cli.BoolFlag{
+	Name:    cfdflags.TUIC,
+	Usage:   "Enable built-in TUIC server",
+	EnvVars: []string{"CLOUDFLARED_TUIC"},
+	Value:   false,
+}
+
+// tuicConfigFlag is the CLI flag for specifying the TUIC config file
+var tuicConfigFlag = &cli.StringFlag{
+	Name:    cfdflags.TUICConfig,
+	Usage:   "Path to TUIC config file (JSON)",
+	EnvVars: []string{"CLOUDFLARED_TUIC_CONFIG"},
 }

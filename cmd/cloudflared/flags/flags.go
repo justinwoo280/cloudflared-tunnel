@@ -169,4 +169,10 @@ const (
 
 	// Proxy enables the built-in proxy server
 	Proxy = "proxy"
+
+	// TUIC enables the built-in TUIC server
+	TUIC = "tuic"
+
+	// TUICConfig is the path to the TUIC config file
+	TUICConfig = "tuic-config"
 )

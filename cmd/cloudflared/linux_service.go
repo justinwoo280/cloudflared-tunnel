@@ -28,6 +28,8 @@ func runApp(app *cli.App, _ chan struct{}) {
 				Flags: []cli.Flag{
 					noUpdateServiceFlag,
 					proxyFlag,
+					tuicFlag,
+					tuicConfigFlag,
 				},
 			},
 			{

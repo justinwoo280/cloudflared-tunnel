@@ -53,6 +53,8 @@ func runApp(app *cli.App, graceShutdownC chan struct{}) {
 				Action: cliutil.ConfiguredAction(installWindowsService),
 				Flags: []cli.Flag{
 					proxyFlag,
+					tuicFlag,
+					tuicConfigFlag,
 				},
 			},
 			{

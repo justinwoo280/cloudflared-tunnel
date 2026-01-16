@@ -29,6 +29,8 @@ func runApp(app *cli.App, _ chan struct{}) {
 				Action: cliutil.ConfiguredAction(installLaunchd),
 				Flags: []cli.Flag{
 					proxyFlag,
+					tuicFlag,
+					tuicConfigFlag,
 				},
 			},
 			{

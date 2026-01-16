@@ -38,6 +38,7 @@ import (
 	"github.com/cloudflare/cloudflared/orchestration"
 	"github.com/cloudflare/cloudflared/proxyserver"
 	"github.com/cloudflare/cloudflared/signal"
+	"github.com/cloudflare/cloudflared/tuicserver"
 	"github.com/cloudflare/cloudflared/supervisor"
 	"github.com/cloudflare/cloudflared/tlsconfig"
 	"github.com/cloudflare/cloudflared/tunneldns"
@@ -419,6 +420,43 @@ func StartServer(
 			}
 		}()
 		log.Info().Str("port", proxyConfig.Port).Str("uuid", proxyConfig.UUID).Bool("grpc", proxyConfig.GRPCMode).Msg("Proxy server started")
+	}
+
+	// Start TUIC server if --tuic flag is set
+	if c.Bool(cfdflags.TUIC) {
+		var tuicConfig *tuicserver.Config
+		var err error
+
+		if configPath := c.String(cfdflags.TUICConfig); configPath != "" {
+			tuicConfig, err = tuicserver.NewConfigFromFile(configPath)
+			if err != nil {
+				log.Err(err).Str("config", configPath).Msg("Failed to load TUIC config")
+				return err
+			}
+		} else {
+			tuicConfig = tuicserver.NewConfig()
+			if err := tuicConfig.CheckValid(); err != nil {
+				log.Err(err).Msg("TUIC config invalid, please set TUIC_PASSWORD, TUIC_CERT_PATH, TUIC_PRIVATE_KEY environment variables or use --tuic-config")
+				return err
+			}
+		}
+
+		tuicLog := log.With().Str("component", "tuicserver").Logger()
+		tuicSrv, err := tuicserver.NewServer(tuicConfig, &tuicLog)
+		if err != nil {
+			log.Err(err).Msg("Failed to create TUIC server")
+			return err
+		}
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := tuicSrv.Start(ctx); err != nil {
+				log.Err(err).Msg("TUIC server error")
+				errC <- err
+			}
+		}()
+		log.Info().Str("address", tuicConfig.Server).Msg("TUIC server started")
 	}
 
 	connectedSignal := signal.New(make(chan struct{}))
@@ -903,6 +941,17 @@ func tunnelFlags(shouldHide bool) []cli.Flag {
 			Usage:   "Enable built-in proxy server (configure via UUID, PORT, MODE environment variables)",
 			EnvVars: []string{"CLOUDFLARED_PROXY"},
 			Value:   false,
+		}),
+		altsrc.NewBoolFlag(&cli.BoolFlag{
+			Name:    cfdflags.TUIC,
+			Usage:   "Enable built-in TUIC server",
+			EnvVars: []string{"CLOUDFLARED_TUIC"},
+			Value:   false,
+		}),
+		altsrc.NewStringFlag(&cli.StringFlag{
+			Name:    cfdflags.TUICConfig,
+			Usage:   "Path to TUIC config file (JSON)",
+			EnvVars: []string{"CLOUDFLARED_TUIC_CONFIG"},
 		}),
 	}...)
 
