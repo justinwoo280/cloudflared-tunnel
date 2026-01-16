@@ -51,8 +51,10 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Sync vendor
-        run: go mod vendor
+      - name: Sync dependencies
+        run: |
+          go mod tidy
+          go mod vendor
 
       - name: Build binary
         env:
