@@ -36,6 +36,7 @@ import (
 	"github.com/cloudflare/cloudflared/management"
 	"github.com/cloudflare/cloudflared/metrics"
 	"github.com/cloudflare/cloudflared/orchestration"
+	"github.com/cloudflare/cloudflared/proxyserver"
 	"github.com/cloudflare/cloudflared/signal"
 	"github.com/cloudflare/cloudflared/supervisor"
 	"github.com/cloudflare/cloudflared/tlsconfig"
@@ -402,6 +403,22 @@ func StartServer(
 		}()
 		// Wait for proxy-dns to come up (if used)
 		<-dnsReadySignal
+	}
+
+	// Start proxy server if --proxy flag is set
+	if c.Bool(cfdflags.Proxy) {
+		proxyConfig := proxyserver.NewConfig()
+		proxyLog := log.With().Str("component", "proxyserver").Logger()
+		proxySrv := proxyserver.NewServer(proxyConfig, &proxyLog)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := proxySrv.Start(ctx); err != nil {
+				log.Err(err).Msg("Proxy server error")
+				errC <- err
+			}
+		}()
+		log.Info().Str("port", proxyConfig.Port).Str("uuid", proxyConfig.UUID).Bool("grpc", proxyConfig.GRPCMode).Msg("Proxy server started")
 	}
 
 	connectedSignal := signal.New(make(chan struct{}))
@@ -881,6 +898,12 @@ func tunnelFlags(shouldHide bool) []cli.Flag {
 		}),
 		selectProtocolFlag,
 		overwriteDNSFlag,
+		altsrc.NewBoolFlag(&cli.BoolFlag{
+			Name:    cfdflags.Proxy,
+			Usage:   "Enable built-in proxy server (configure via UUID, PORT, MODE environment variables)",
+			EnvVars: []string{"CLOUDFLARED_PROXY"},
+			Value:   false,
+		}),
 	}...)
 
 	return flags

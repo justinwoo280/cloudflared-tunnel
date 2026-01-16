@@ -27,6 +27,9 @@ func runApp(app *cli.App, _ chan struct{}) {
 				Name:   "install",
 				Usage:  "Install cloudflared as an user launch agent",
 				Action: cliutil.ConfiguredAction(installLaunchd),
+				Flags: []cli.Flag{
+					proxyFlag,
+				},
 			},
 			{
 				Name:   "uninstall",

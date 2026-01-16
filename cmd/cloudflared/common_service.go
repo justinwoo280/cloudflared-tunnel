@@ -5,6 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/cliutil"
+	cfdflags "github.com/cloudflare/cloudflared/cmd/cloudflared/flags"
 	"github.com/cloudflare/cloudflared/cmd/cloudflared/tunnel"
 )
 
@@ -14,9 +15,16 @@ func buildArgsForToken(c *cli.Context, log *zerolog.Logger) ([]string, error) {
 		return nil, cliutil.UsageError("Provided tunnel token is not valid (%s).", err)
 	}
 
-	return []string{
+	args := []string{
 		"tunnel", "run", "--token", token,
-	}, nil
+	}
+
+	// Add --proxy flag if set
+	if c.Bool(cfdflags.Proxy) {
+		args = append(args, "--"+cfdflags.Proxy)
+	}
+
+	return args, nil
 }
 
 func getServiceExtraArgsFromCliArgs(c *cli.Context, log *zerolog.Logger) ([]string, error) {
@@ -27,4 +35,12 @@ func getServiceExtraArgsFromCliArgs(c *cli.Context, log *zerolog.Logger) ([]stri
 		// empty extra args
 		return make([]string, 0), nil
 	}
+}
+
+// proxyFlag is the CLI flag for enabling the proxy server
+var proxyFlag = &cli.BoolFlag{
+	Name:    cfdflags.Proxy,
+	Usage:   "Enable built-in proxy server (configure via UUID, PORT, MODE environment variables)",
+	EnvVars: []string{"CLOUDFLARED_PROXY"},
+	Value:   false,
 }

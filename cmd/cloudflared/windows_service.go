@@ -51,6 +51,9 @@ func runApp(app *cli.App, graceShutdownC chan struct{}) {
 				Name:   "install",
 				Usage:  "Install cloudflared as a Windows service",
 				Action: cliutil.ConfiguredAction(installWindowsService),
+				Flags: []cli.Flag{
+					proxyFlag,
+				},
 			},
 			{
 				Name:   "uninstall",

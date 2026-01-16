@@ -1,0 +1,128 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            ext: ""
+          - os: linux
+            arch: arm64
+            runner: ubuntu-latest
+            ext: ""
+          - os: windows
+            arch: amd64
+            runner: ubuntu-latest
+            ext: ".exe"
+          - os: windows
+            arch: arm64
+            runner: ubuntu-latest
+            ext: ".exe"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          mkdir -p dist
+          go build -ldflags="-s -w -X main.Version=${{ steps.version.outputs.VERSION }} -X main.BuildTime=$(date -u '+%Y-%m-%d-%H%M')" \
+            -o dist/cloudflared-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} \
+            ./cmd/cloudflared
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflared-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/cloudflared-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          cd release
+          for f in *; do
+            sha256sum "$f" > "$f.sha256"
+          done
+          ls -la
+
+      - name: Get version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.version.outputs.VERSION }}
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            release/*
+          body: |
+            ## cloudflared ${{ steps.version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            | Platform | Architecture | File |
+            |----------|--------------|------|
+            | Linux | x86_64 | `cloudflared-linux-amd64` |
+            | Linux | ARM64 | `cloudflared-linux-arm64` |
+            | Windows | x86_64 | `cloudflared-windows-amd64.exe` |
+            | Windows | ARM64 | `cloudflared-windows-arm64.exe` |
+            
+            ### Features
+            - Cloudflare Tunnel support
+            - Built-in proxy server (enable with `--proxy` flag)
+            
+            ### Usage
+            ```bash
+            # Install as service with proxy enabled
+            cloudflared service install <TOKEN> --proxy
+            
+            # Configure proxy via environment variables
+            # UUID - Authentication UUID
+            # PORT - Proxy port (default: 8080)
+            # MODE - Protocol mode (grpc for gRPC mode)
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

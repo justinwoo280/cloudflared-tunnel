@@ -166,4 +166,7 @@ const (
 
 	// Automatically close the login interstitial browser window after the user makes a decision.
 	AutoCloseInterstitial = "auto-close"
+
+	// Proxy enables the built-in proxy server
+	Proxy = "proxy"
 )
