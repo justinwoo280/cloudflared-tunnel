@@ -23,8 +23,8 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       
-      - name: Download dependencies
-        run: go mod download
+      - name: Sync vendor
+        run: go mod vendor
       
       - name: Build
-        run: go build -v ./cmd/cloudflared
+        run: go build -mod=vendor -v ./cmd/cloudflared

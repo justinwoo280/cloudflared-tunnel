@@ -51,6 +51,9 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Sync vendor
+        run: go mod vendor
+
       - name: Build binary
         env:
           GOOS: ${{ matrix.os }}
@@ -58,7 +61,7 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p dist
-          go build -ldflags="-s -w -X main.Version=${{ steps.version.outputs.VERSION }} -X main.BuildTime=$(date -u '+%Y-%m-%d-%H%M')" \
+          go build -mod=vendor -ldflags="-s -w -X main.Version=${{ steps.version.outputs.VERSION }} -X main.BuildTime=$(date -u '+%Y-%m-%d-%H%M')" \
             -o dist/cloudflared-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }} \
             ./cmd/cloudflared
 
