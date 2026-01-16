@@ -1,18 +1,30 @@
-on: [push, pull_request]
-name: Check
+name: Build Check
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
 jobs:
-  check:
+  build:
     strategy:
       matrix:
         go-version: ['1.24']
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Build
-      run: go build ./cmd/cloudflared
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Build
+        run: go build -v ./cmd/cloudflared
